@@ -6,6 +6,7 @@ import { initializeDatabase } from "./db/database.js";
 import { initializeNotificationSeed } from "./routes/notifications.js";
 import { AuthCredentials } from "./utils/auth.js";
 import { createErrorLogger, createRequestLogger } from "./middleware/loggingMiddleware.js";
+import { HttpError } from "./utils/httpError.js";
 
 const app = express();
 let logAccessToken = config.auth.accessToken;
@@ -29,10 +30,14 @@ app.use((req, res) => {
 app.use(createErrorLogger(() => logAccessToken));
 
 app.use((err, req, res, next) => {
-  console.error("[ERROR]", err.message);
-  res.status(err.status || 500).json({
-    status: "error",
-    message: err.message || "Internal Server Error",
+  const statusCode = err instanceof HttpError ? err.statusCode : err.status || 500;
+  const message = err.message || "Internal Server Error";
+
+  console.error("[ERROR]", message);
+
+  res.status(statusCode).json({
+    status: statusCode >= 500 ? "error" : "fail",
+    message,
   });
 });
 

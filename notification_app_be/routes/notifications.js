@@ -7,6 +7,8 @@ import {
   seedNotifications,
   updateNotification,
 } from "../repositories/notificationRepository.js";
+import { notFound } from "../utils/httpError.js";
+import { validateNotificationBody } from "../middleware/validation.js";
 
 const router = express.Router();
 
@@ -49,10 +51,7 @@ router.get("/notifications/:id", async (req, res, next) => {
     const notification = await getNotificationById(req.params.id);
 
     if (!notification) {
-      return res.status(404).json({
-        status: "error",
-        message: "Notification not found",
-      });
+      throw notFound("Notification not found");
     }
 
     return res.status(200).json({
@@ -64,24 +63,15 @@ router.get("/notifications/:id", async (req, res, next) => {
   }
 });
 
-router.post("/notifications", async (req, res, next) => {
-  const { title, message, audience = "students", status = "draft" } = req.body;
-
-  if (!title || !message) {
-    return res.status(400).json({
-      status: "error",
-      message: "title and message are required",
-    });
-  }
-
+router.post("/notifications", validateNotificationBody({ requireTitle: true, requireMessage: true }), async (req, res, next) => {
   try {
     const now = new Date().toISOString();
     const notification = {
       id: createNotificationId(),
-      title,
-      message,
-      audience,
-      status,
+      title: req.body.title,
+      message: req.body.message,
+      audience: req.body.audience,
+      status: req.body.status,
       createdAt: now,
       updatedAt: now,
     };
@@ -98,15 +88,12 @@ router.post("/notifications", async (req, res, next) => {
   }
 });
 
-router.put("/notifications/:id", async (req, res, next) => {
+router.put("/notifications/:id", validateNotificationBody({ requireTitle: false, requireMessage: false }), async (req, res, next) => {
   try {
     const updatedNotification = await updateNotification(req.params.id, req.body);
 
     if (!updatedNotification) {
-      return res.status(404).json({
-        status: "error",
-        message: "Notification not found",
-      });
+      throw notFound("Notification not found");
     }
 
     return res.status(200).json({
@@ -124,10 +111,7 @@ router.delete("/notifications/:id", async (req, res, next) => {
     const deletedNotification = await deleteNotification(req.params.id);
 
     if (!deletedNotification) {
-      return res.status(404).json({
-        status: "error",
-        message: "Notification not found",
-      });
+      throw notFound("Notification not found");
     }
 
     return res.status(200).json({
