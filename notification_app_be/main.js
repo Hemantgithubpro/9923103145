@@ -36,6 +36,13 @@ async function AuthCredentials(email,name,rollNo,accessCode,clientID,clientSecre
   }
 }
 
+// stack: backend
+// level: debug, info, warn, error, fatal
+// package: cache, controller, cron_job, db, domain, handler, repository, route, service
+// message: any string
+
+
+
 // this api call has to take authorization token as well
  async function LogWithAuth(stack, level, pkg, message, token) {
   try {
