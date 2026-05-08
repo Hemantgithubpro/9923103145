@@ -4,16 +4,16 @@ import healthRoutes from "./routes/health.js";
 import notificationRoutes from "./routes/notifications.js";
 import { initializeDatabase } from "./db/database.js";
 import { initializeNotificationSeed } from "./routes/notifications.js";
+import { AuthCredentials } from "./utils/auth.js";
+import { createErrorLogger, createRequestLogger } from "./middleware/loggingMiddleware.js";
 
 const app = express();
+let logAccessToken = config.auth.accessToken;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
+app.use(createRequestLogger(() => logAccessToken));
 
 app.use("/", healthRoutes);
 app.use("/", notificationRoutes);
@@ -25,6 +25,8 @@ app.use((req, res) => {
     path: req.path,
   });
 });
+
+app.use(createErrorLogger(() => logAccessToken));
 
 app.use((err, req, res, next) => {
   console.error("[ERROR]", err.message);
@@ -38,6 +40,15 @@ async function startServer() {
   try {
     await initializeDatabase();
     await initializeNotificationSeed();
+
+    try {
+      const authResponse = await AuthCredentials();
+      if (authResponse?.access_token) {
+        logAccessToken = authResponse.access_token;
+      }
+    } catch (authError) {
+      console.warn("Auth token unavailable for logging middleware");
+    }
 
     const PORT = config.port;
     app.listen(PORT, () => {
