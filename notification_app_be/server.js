@@ -1,7 +1,7 @@
 import express from "express";
 import { config } from "./config/config.js";
 import healthRoutes from "./routes/health.js";
-import { LogWithAuth } from "./utils/logger.js";
+import notificationRoutes from "./routes/notifications.js";
 
 const app = express();
 
@@ -14,6 +14,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/", healthRoutes);
+app.use("/", notificationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({
