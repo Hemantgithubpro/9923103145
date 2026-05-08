@@ -3,3 +3,4 @@ auth_credentials/
 .env
 .vscode/
 notes/
+*.db

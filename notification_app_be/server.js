@@ -2,6 +2,8 @@ import express from "express";
 import { config } from "./config/config.js";
 import healthRoutes from "./routes/health.js";
 import notificationRoutes from "./routes/notifications.js";
+import { initializeDatabase } from "./db/database.js";
+import { initializeNotificationSeed } from "./routes/notifications.js";
 
 const app = express();
 
@@ -32,11 +34,23 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = config.port;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Environment: ${config.environment}`);
-  console.log(`Health Check: http://localhost:${PORT}/health`);
-});
+async function startServer() {
+  try {
+    await initializeDatabase();
+    await initializeNotificationSeed();
+
+    const PORT = config.port;
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+      console.log(`Environment: ${config.environment}`);
+      console.log(`Health Check: http://localhost:${PORT}/health`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 export default app;
