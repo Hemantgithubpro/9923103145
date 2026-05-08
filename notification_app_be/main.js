@@ -4,9 +4,24 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const LOG_API_URL = "http://4.224.186.213/evaluation-service/logs";
+const AUTH_API_URL = "http://4.224.186.213/evaluation-service/auth";
 
 
-export async function Log(stack, level, pkg, message) {
+async function AuthCredentials(email,name,rollNo,accessCode,clientID,clientSecret) {
+  try {
+    const payload = { email, name, rollNo, accessCode, clientID, clientSecret };
+
+    const response = await axios.post(AUTH_API_URL, payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error("Failed to authenticate:", error);
+  }
+}
+
+ async function Log(stack, level, pkg, message) {
   try {
     const payload = { stack, level, package: pkg, message };
 
@@ -22,14 +37,16 @@ export async function Log(stack, level, pkg, message) {
 }
 
 // this api call has to take authorization token as well
-export async function LogWithAuth(stack, level, pkg, message, token) {
+ async function LogWithAuth(stack, level, pkg, message, token) {
   try {
     const payload = { stack, level, package: pkg, message };
+
+    const cleanToken = (token || "").replace(/[\x00-\x1F\x7F]+/g, "").trim();
 
     const response = await axios.post(LOG_API_URL, payload, {
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
+        "Authorization": `Bearer ${cleanToken}`
       },
     });
 
@@ -40,20 +57,22 @@ export async function LogWithAuth(stack, level, pkg, message, token) {
   }
 }
 
-const token = process.env.ACCESS_TOKEN;
+const token = (process.env.ACCESS_TOKEN || "").replace(/\r?\n/g, "").trim();
+const email = process.env.email || "";
+const name = process.env.name || "";
+const rollNo = process.env.rollNo || "";
+const accessCode = process.env.accessCode || "";
+const clientID = process.env.clientID || "";
+const clientSecret = process.env.clientSecret || "";
 
 async function run() {
-  if (!token) {
-    console.error("ACCESS_TOKEN not set in .env");
-    return;
-  }
+  const authResponse = await AuthCredentials(email, name, rollNo, accessCode, clientID, clientSecret);
+  // console.log("Auth Response:", authResponse);
+  const accessToken = authResponse.access_token;
+  // console.log("Using Access Token:", accessToken);
 
-  try {
-    const value = await LogWithAuth("backend", "error", "handler", "This is a log message with authentication", token);
-    console.log(value);
-  } catch (err) {
-    console.error("Error sending authenticated log:", err);
-  }
+  let logResponse = await LogWithAuth("backend", "error", "handler", "received string, expected bool", accessToken);
+  console.log("Log Response:", logResponse);
 }
 
 run();
